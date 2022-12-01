@@ -10,13 +10,21 @@ if ( config.USE_AIRBRAKE ){
     app.use(airbrake.expressHandler());
 }
 
-var gpio = require('rpi-gpio');
+// var gpio = require('rpi-gpio');
 // const { RTMClient } = require('@slack/rtm-api');
 var SlackBot = require('slackbots');
+const util = require("util");
 
 
 var pin = 11;
 var doorTimeout = 3;
+const botResponses = [
+    'Vos désirs sont des ordres <@%s>',
+    'J\'éxécute de ce pas <@%s>',
+    'Je ne suis fait que pour ça maitre-sse <@%s>',
+    'J\'étais sur qu\'on allait me demander ça, c\'est fait <@%s>',
+    'Et si tu le faisait toi même <@%s> ? Non c\'est bon, j\'y vais...'
+]
 var relayOpen = false;
 // var slack = new RTMClient(config.SLACK_TOKEN, { autoReconnect: true });
 var bot = new SlackBot({
@@ -26,14 +34,14 @@ var bot = new SlackBot({
 
 /* gpio */
 // Open pin for output
-gpio.setup(pin, gpio.DIR_OUT, write);
-function write(err) {
-    if (err) throw err;
-    gpio.write(pin, true, function(err) {
-        if (err) throw err;
-        console.log('Written to pin');
-    });
-}
+// gpio.setup(pin, gpio.DIR_OUT, write);
+// function write(err) {
+//     if (err) throw err;
+//     gpio.write(pin, true, function(err) {
+//         if (err) throw err;
+//         console.log('Written to pin');
+//     });
+// }
 
 app.get('/', function (req, res) {
     res.send('Hello World!')
@@ -49,40 +57,42 @@ var server = app.listen(3000, function () {
 })
 
 /* Slack */
-bot.on('message', function(message) {
+bot.on('message', async function (message) {
     var type = message.type,
-        channel = bot.getChannelById(message.channel),
-        user = bot.getUserById(message.user),
+        user = message.user,
+        channel = message.channel,
         time = message.ts,
         text = message.text,
         response = '';
 
-    if (user === undefined){
-        /* skip channel messages(skip the messages which are not sent to sesame directly) */
+    if (['hello', 'user_typing', 'error'].includes(type)) {
         return true;
     }
+
+    try {
+        console.log(message.type);
+        channel = await bot.getChannelById(message.channel)
+        user = await bot.getUserById(message.user);
+    } catch (e) {
+        return true
+    }
+
+    if (user === undefined || channel=== undefined) {
+        return true;
+    }
+
     console.log('Received: %s %s @%s %s "%s"', type, (channel.is_channel ? '#' : '') + channel.name, user.name, time, text);
 
-    if (type === 'message' && user.name === 'Alexis Ragot') {
-        if (text === 'open' || (text.indexOf('open ') === 0)){
-            if (text === 'open') {
-                doorTimeout = 3;
-            } else {
-                doorTimeout = parseInt(text.replace("open ", ""));
-            }
+    if (type === 'message' && user.name === 'alexis.ragot') {
+        if (['open', 'ouvre', 'sesam'].some((item) => text.toLowerCase().indexOf(item) > -1)){
 
-            if (doorTimeout > 10) {
-                doorTimeout = 3;
-            }
+            console.log("fake openDoor call : " + doorTimeout)
+            openDoor(doorTimeout);
 
-            if (doorTimeout == 0) {
-                closeRelay();
-            } else {
-                openDoor(doorTimeout);
-            }
-            response = 'ok';
-            channel.send(response);
-            console.log('@%s responded with "%s"', slack.self.name, response);
+            response = util.format(botResponses[Math.floor(Math.random() * botResponses.length)], user.name)
+            await bot.postMessageToChannel(channel.name, response)
+            // channel.send(response);
+            console.log('@%s responded with "%s"', bot.self.name, response);
         }
     }
 });
@@ -94,7 +104,7 @@ bot.on('error', function(error) {
 // (async () => {
 //     await slack.start();
 // })();
-bot.login();
+// bot.login();
 
 /* /slack */
 function openDoor(doorTimeout){
@@ -103,13 +113,14 @@ function openDoor(doorTimeout){
         relayOpen = true;
         console.log('open called');
 
-        gpio.write(pin, false, function(err) {
-            if (err) throw err;
-            console.log('Written to pin');
-        });
+        // gpio.write(pin, false, function(err) {
+        //     if (err) throw err;
+        //     console.log('Written to pin');
+        // });
 
         setTimeout(function() {
-            closeRelay();
+            console.log("fake closeRelay call by timeout")
+            // closeRelay();
         }, (doorTimeout * 1000));
     }
 }
