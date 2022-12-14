@@ -28,7 +28,7 @@ var bot = new SlackBot({
     name: "Sesam"
 });
 
-relay.writeSync(1)
+relay.writeSync(1) // close
 
 app.get('/', function (req, res) {
     res.send('Hello World!')
@@ -83,35 +83,21 @@ bot.on('error', function(error) {
     console.error('Error: %s', error);
 });
 
-// (async () => {
-//     await slack.start();
-// })();
-// bot.login();
-
 /* /slack */
 function openDoor(doorTimeout){
-    console.log("fake openDoor call : " + doorTimeout)
+    console.log("openDoor call : " + doorTimeout)
     if(!relayOpen){
         relayOpen = true;
-        console.log('open called');
-
-        // gpio.write(pin, false, function(err) {
-        //     if (err) throw err;
-        //     console.log('Written to pin');
-        // });
-
+        relay.writeSync(0)
+        console.log('opened');
         setTimeout(function() {
-            console.log("fake closeRelay call by timeout")
-            // closeRelay();
+            closeRelay();
         }, (doorTimeout * 1000));
     }
 }
 
 function closeRelay(){
-    // gpio.write(pin, true, function(err) {
-    //     if (err) throw err;
-    //     console.log('Written to pin');
-    // });
+    relay.writeSync(1)
     console.log('closed!');
     relayOpen = false;
 }
