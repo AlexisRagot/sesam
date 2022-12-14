@@ -1,7 +1,9 @@
-var express = require('express');
-var app = express();
-
-var config = require('./config')
+const express = require('express');
+const app = express();
+const config = require('./config')
+const util = require("util");
+const SlackBot = require('slackbots');
+const Gpio = require('onoff').Gpio;
 
 /* airbrake */
 if ( config.USE_AIRBRAKE ){
@@ -10,14 +12,6 @@ if ( config.USE_AIRBRAKE ){
     app.use(airbrake.expressHandler());
 }
 
-// var gpio = require('rpi-gpio');
-// const { RTMClient } = require('@slack/rtm-api');
-var SlackBot = require('slackbots');
-const util = require("util");
-
-
-var pin = 11;
-var doorTimeout = 3;
 const botResponses = [
     'Vos désirs sont des ordres <@%s>',
     'J\'éxécute de ce pas <@%s>',
@@ -25,40 +19,30 @@ const botResponses = [
     'J\'étais sur qu\'on allait me demander ça, c\'est fait <@%s>',
     'Et si tu le faisait toi même <@%s> ? Non c\'est bon, j\'y vais...'
 ]
+const relay = new Gpio(17, 'out');
+const doorTimeout = 3;
 var relayOpen = false;
-// var slack = new RTMClient(config.SLACK_TOKEN, { autoReconnect: true });
+
 var bot = new SlackBot({
     token: config.SLACK_TOKEN,
     name: "Sesam"
 });
 
-/* gpio */
-// Open pin for output
-// gpio.setup(pin, gpio.DIR_OUT, write);
-// function write(err) {
-//     if (err) throw err;
-//     gpio.write(pin, true, function(err) {
-//         if (err) throw err;
-//         console.log('Written to pin');
-//     });
-// }
+relay.writeSync(1)
 
 app.get('/', function (req, res) {
     res.send('Hello World!')
 })
 
-var server = app.listen(3000, function () {
-
-    var host = server.address().address
-    var port = server.address().port
-
+const server = app.listen(3000, function () {
+    const host = server.address().address;
+    const port = server.address().port;
     console.log('Example app listening at http://%s:%s', host, port)
-
-})
+});
 
 /* Slack */
 bot.on('message', async function (message) {
-    var type = message.type,
+    let type = message.type,
         user = message.user,
         channel = message.channel,
         time = message.ts,
@@ -85,8 +69,6 @@ bot.on('message', async function (message) {
 
     if (type === 'message' && user.name === 'alexis.ragot') {
         if (['open', 'ouvre', 'sesam'].some((item) => text.toLowerCase().indexOf(item) > -1)){
-
-            console.log("fake openDoor call : " + doorTimeout)
             openDoor(doorTimeout);
 
             response = util.format(botResponses[Math.floor(Math.random() * botResponses.length)], user.name)
@@ -108,7 +90,7 @@ bot.on('error', function(error) {
 
 /* /slack */
 function openDoor(doorTimeout){
-    doorTimeout = doorTimeout || 1;
+    console.log("fake openDoor call : " + doorTimeout)
     if(!relayOpen){
         relayOpen = true;
         console.log('open called');
@@ -126,10 +108,10 @@ function openDoor(doorTimeout){
 }
 
 function closeRelay(){
-    gpio.write(pin, true, function(err) {
-        if (err) throw err;
-        console.log('Written to pin');
-    });
+    // gpio.write(pin, true, function(err) {
+    //     if (err) throw err;
+    //     console.log('Written to pin');
+    // });
     console.log('closed!');
     relayOpen = false;
 }
