@@ -67,7 +67,7 @@ bot.on('message', async function (message) {
 
     console.log('Received: %s %s @%s %s "%s"', type, (channel.is_channel ? '#' : '') + channel.name, user.name, time, text);
 
-    if (type === 'message' && user.name === 'alexis.ragot') {
+    if (type === 'message' && user.name) {
         if (['open', 'ouvre', 'sesam'].some((item) => text.toLowerCase().indexOf(item) > -1)){
             openDoor(doorTimeout);
 
