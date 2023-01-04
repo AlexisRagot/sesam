@@ -28,7 +28,7 @@ var bot = new SlackBot({
     name: "Sesam"
 });
 
-relay.writeSync(0) // close
+relay.writeSync(1) // close
 
 app.get('/', function (req, res) {
     res.send('Hello World!')
@@ -67,7 +67,7 @@ bot.on('message', async function (message) {
 
     console.log('Received: %s %s @%s %s "%s"', type, (channel.is_channel ? '#' : '') + channel.name, user.name, time, text);
 
-    if (type === 'message' && user.name === 'alexis.ragot') {
+    if (type === 'message' && user.name) {
         if (['open', 'ouvre', 'sesam'].some((item) => text.toLowerCase().indexOf(item) > -1)){
             openDoor(doorTimeout);
 
@@ -88,7 +88,7 @@ function openDoor(doorTimeout){
     console.log("openDoor call : " + doorTimeout)
     if(!relayOpen){
         relayOpen = true;
-        relay.writeSync(1)
+        relay.writeSync(0)
         console.log('opened');
         setTimeout(function() {
             closeRelay();
@@ -97,7 +97,7 @@ function openDoor(doorTimeout){
 }
 
 function closeRelay(){
-    relay.writeSync(0)
+    relay.writeSync(1)
     console.log('closed!');
     relayOpen = false;
 }
