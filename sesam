@@ -9,7 +9,7 @@
 
 case "$1" in
   start)
-    su pi -c 'forever start -p /home/tokles/.forever /home/tokles/projet/sesam/app.js'
+    su pi -c 'forever start /home/tokles/projet/sesam/app.js'
     ;;
   stop)
     su pi -c 'forever stopall'
